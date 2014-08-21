@@ -1,4 +1,4 @@
-/**
+/*
  * =============================================================================
  *
  *       Filename:  exec.c
@@ -32,11 +32,11 @@
  * @pi_stderr:		file descriptor connected to stderr of process %pi_pid
  * @pi_retval:		holds the exit status once the process has exited
  *
- * This struct will be filled by sgExecProcess() to maintain
+ * This struct will be filled by exec_process() to maintain
  * two-way communication with the child process once the function
  * returns. The file descriptors referring to stdin, stdout, and stderr
  * respectively of the child process have to be closed manually or by calling
- * sgWaitForChild() with @closeFds set to %true once they are of no use anymore
+ * wait_for_child() with @close_fds set to %true once they are of no use anymore
  */
 struct process_info {
 	pid_t pi_pid;
@@ -61,7 +61,7 @@ enum user_info_type {
 
 
 /**
- * user_info_t - user identification
+ * union user_info_t - user identification
  * @ui_uid:			user UID
  * @ui_name:			user name
  */
@@ -96,15 +96,15 @@ typedef union {
  *                are the user's UID or name. @user_type indicates which one
  *                is actually used.
  *
- * @return:			- On success, %0 is returned.
- *                              - If an error occurrs in the parent process
- *                                (before fork() was called), the return value
- *                                is in [ -1, -EXEC_PROCESS_ERROR_OFFSET ]
- *                              - If an error occurrs in the child process,
- *                                (after fork() was called), the return value
- *                                is in [ -EXEC_PROCESS_ERROR_OFFSET, ...]
- *                              In any case, the returned error code is
- *                              actually just the processes @errno.
+ * @return: On success, %0 is returned.
+ *          - If an error occurrs in the parent process
+ *            (before fork() was called), the return value
+ *            is in [ -1, -EXEC_PROCESS_ERROR_OFFSET ]
+ *          - If an error occurrs in the child process,
+ *            (after fork() was called), the return value
+ *            is in [ -EXEC_PROCESS_ERROR_OFFSET, ...]
+ *          In any case, the returned error code is
+ *          actually just the processes @errno.
  */
 extern _sentinel int exec_process(struct process_info *proc, bool wait,
                                   user_info_t user,
@@ -120,7 +120,7 @@ extern _sentinel int exec_process(struct process_info *proc, bool wait,
  * @user_type:			if @user is non-null, indicates the type of
  *                              user information (uid or name)
  * @cmd:			the file to be executed
- * @...:			NULL-terminated list of arguments passed to @cmd
+ * @argv:			NULL-terminated list of arguments passed to @cmd
  *
  * exec_process() performs a fork() and depending on its parameters, behaves as
  * follows:     - if @wait is set to %true, @proc is ignored and the function
@@ -134,15 +134,15 @@ extern _sentinel int exec_process(struct process_info *proc, bool wait,
  *                are the user's UID or name. @user_type indicates which one
  *                is actually used.
  *
- * @return:			- On success, %0 is returned.
- *                              - If an error occurrs in the parent process
- *                                (before fork() was called), the return value
- *                                is in [ -1, -EXEC_PROCESS_ERROR_OFFSET ]
- *                              - If an error occurrs in the child process,
- *                                (after fork() was called), the return value
- *                                is in [ -EXEC_PROCESS_ERROR_OFFSET, ...]
- *                              In any case, the returned error code is
- *                              actually just the processes @errno.
+ * @return: On success, %0 is returned.
+ *          - If an error occurrs in the parent process
+ *            (before fork() was called), the return value
+ *            is in [ -1, -EXEC_PROCESS_ERROR_OFFSET ]
+ *          - If an error occurrs in the child process,
+ *            (after fork() was called), the return value
+ *            is in [ -EXEC_PROCESS_ERROR_OFFSET, ...]
+ *          In any case, the returned error code is
+ *          actually just the processes @errno.
  */
 extern int exec_process_p(struct process_info *proc, bool wait,
                           user_info_t user, enum user_info_type user_type,
@@ -155,9 +155,9 @@ extern int exec_process_p(struct process_info *proc, bool wait,
  * @close_fds:			if %true, open file descriptors to the child's
  *                              standard input, output and standard error are
  *                              closed upon process termination.
- * @return:			On sucess, %0 is returned, otherwise the
- *                              function returns %-1 and @errno is set
- *                              according to waitpid(2).
+ * @return: On sucess, %0 is returned, otherwise the
+ *          function returns %-1 and @errno is set
+ *          according to waitpid(2).
  */
 extern int wait_for_child(struct process_info *proc, bool close_fds);
 
@@ -174,10 +174,10 @@ extern int wait_for_child(struct process_info *proc, bool close_fds);
  * function behaves exactly like read(2). Otherwise, select(2) will be used
  * to wait up to @timeout seconds until returning an error.
  *
- * @return:			On success, the number of bytes read is
- *                              returned (zero indicates end of file).
- *                              On error, -1 is returned, and errno is set
- *                              according to read(2) and select(2).
+ * @return: On success, the number of bytes read is
+ *          returned (zero indicates end of file).
+ *          On error, -1 is returned, and errno is set
+ *          according to read(2) and select(2).
  */
 extern ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout);
 
@@ -194,10 +194,10 @@ extern ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout);
  * function behaves exactly like write(2). Otherwise, select(2) will be used
  * to wait up to @timeout seconds until returning an error.
  *
- * @return:			On success, the number of bytes written is
- *                              returned (zero indicates end of file).
- *                              On error, -1 is returned, and errno is set
- *                              according to write(2) and select(2).
+ * @return: On success, the number of bytes written is
+ *          returned (zero indicates end of file).
+ *          On error, -1 is returned, and errno is set
+ *          according to write(2) and select(2).
  */
 extern ssize_t timed_write(int fd, const void *buf,
                            size_t size, unsigned int timeout);
@@ -238,8 +238,8 @@ extern void get_exit_details(int status, int *ret, bool *core,
  *      - if killed by a signal, the signal number
  *      - if killed by a signal, whether the core was dumped
  *
- * @return:			0 for success, 1 otherwise.
- *                              errno will be set according to asprintf(3).
+ * @return: 0 for success, 1 otherwise.
+ *          errno will be set according to asprintf(3).
  */
 extern int copy_exit_detail_str(int status, char **buffer);
 

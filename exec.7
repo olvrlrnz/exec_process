@@ -1,0 +1,257 @@
+.TH "Miscellaneous" 9 "struct process_info" "August 2014" "API Manual" LINUX
+.SH NAME
+struct process_info \- process information
+.SH SYNOPSIS
+struct process_info {
+.br
+.BI "    pid_t " pi_pid ""
+;
+
+.br
+.BI "    int " pi_stdin ""
+;
+
+.br
+.BI "    int " pi_stdout ""
+;
+
+.br
+.BI "    int " pi_stderr ""
+;
+
+.br
+.BI "    int " pi_retval ""
+;
+
+.br
+};
+.br
+.SH Members
+.IP "pi_pid" 12
+PID of the process
+.IP "pi_stdin" 12
+file descriptor connected to stdin of process pi_pid
+.IP "pi_stdout" 12
+file descriptor connected to stdout of process pi_pid
+.IP "pi_stderr" 12
+file descriptor connected to stderr of process pi_pid
+.IP "pi_retval" 12
+holds the exit status once the process has exited
+.SH "Description"
+This struct will be filled by \fBexec_process\fP to maintain
+two-way communication with the child process once the function
+returns. The file descriptors referring to stdin, stdout, and stderr
+respectively of the child process have to be closed manually or by calling
+\fBwait_for_child\fP with \fIclose_fds\fP set to true once they are of no use anymore
+.TH "Miscellaneous" 9 "enum user_info_type" "August 2014" "API Manual" LINUX
+.SH NAME
+enum user_info_type \- user information type information
+.SH SYNOPSIS
+enum user_info_type {
+.br
+.BI "    USERINFO_TYPE_NONE"
+, 
+.br
+.br
+.BI "    USERINFO_TYPE_UID"
+, 
+.br
+.br
+.BI "    USERINFO_TYPE_NAME"
+
+};
+.SH Constants
+.IP "USERINFO_TYPE_NONE" 12
+invalid
+.IP "USERINFO_TYPE_UID" 12
+the provided information is a user's UID
+.IP "USERINFO_TYPE_NAME" 12
+the provided information is a user's name
+.TH "exec_process" 9 "exec_process" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+exec_process \- execute a file
+.SH SYNOPSIS
+.B "_sentinel int" exec_process
+.BI "(struct process_info *" proc ","
+.BI "bool " wait ","
+.BI "user_info_t " user ","
+.BI "enum user_info_type " user_type ","
+.BI "const char *" cmd ","
+.BI "" ... ");"
+.SH ARGUMENTS
+.IP "proc" 12
+storage space for process information
+.IP "wait" 12
+if set, wait until \fIcmd\fP terminates
+.IP "user" 12
+if set, drop privileges before executing \fIcmd\fP
+.IP "user_type" 12
+if \fIuser\fP is non-null, indicates the type of
+user information (uid or name)
+.IP "cmd" 12
+the file to be executed
+@...:			NULL-terminated list of arguments passed to \fIcmd\fP
+.IP "..." 12
+variable arguments
+.SH "DESCRIPTION"
+\fBexec_process\fP performs a \fBfork\fP and depending on its parameters, behaves as
+.SH "FOLLOWS"
+- if \fIwait\fP is set to true, \fIproc\fP is ignored and the function
+returns only when \fIcmd\fP has terminated
+- if \fIwait\fP is set to false, the function returns as soon as
+\fIcmd\fP has been executed. Additionally, if \fIproc\fP is non-null,
+it will be filled with the child's PID and file descriptors
+to its standard input, output, and standard error
+- if \fIuser\fP is non-null, the child drops its privileges after
+forking. Supported types for the value specified in \fIuser\fP
+are the user's UID or name. \fIuser_type\fP indicates which one
+is actually used.
+.TH "exec_process_p" 9 "exec_process_p" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+exec_process_p \- execute a file
+.SH SYNOPSIS
+.B "int" exec_process_p
+.BI "(struct process_info *" proc ","
+.BI "bool " wait ","
+.BI "user_info_t " user ","
+.BI "enum user_info_type " user_type ","
+.BI "const char *" cmd ","
+.BI "char *const " argv[] ");"
+.SH ARGUMENTS
+.IP "proc" 12
+storage space for process information
+.IP "wait" 12
+if set, wait until \fIcmd\fP terminates
+.IP "user" 12
+if set, drop privileges before executing \fIcmd\fP
+.IP "user_type" 12
+if \fIuser\fP is non-null, indicates the type of
+user information (uid or name)
+.IP "cmd" 12
+the file to be executed
+.IP "argv[]" 12
+NULL-terminated list of arguments passed to \fIcmd\fP
+.SH "DESCRIPTION"
+\fBexec_process\fP performs a \fBfork\fP and depending on its parameters, behaves as
+.SH "FOLLOWS"
+- if \fIwait\fP is set to true, \fIproc\fP is ignored and the function
+returns only when \fIcmd\fP has terminated
+- if \fIwait\fP is set to false, the function returns as soon as
+\fIcmd\fP has been executed. Additionally, if \fIproc\fP is non-null,
+it will be filled with the child's PID and file descriptors
+to its standard input, output, and standard error
+- if \fIuser\fP is non-null, the child drops its privileges after
+forking. Supported types for the value specified in \fIuser\fP
+are the user's UID or name. \fIuser_type\fP indicates which one
+is actually used.
+.TH "wait_for_child" 9 "wait_for_child" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+wait_for_child \- wait for a child process to terminate
+.SH SYNOPSIS
+.B "int" wait_for_child
+.BI "(struct process_info *" proc ","
+.BI "bool " close_fds ");"
+.SH ARGUMENTS
+.IP "proc" 12
+process information
+.IP "close_fds" 12
+if true, open file descriptors to the child's
+standard input, output and standard error are
+closed upon process termination.
+.TH "timed_read" 9 "timed_read" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+timed_read \- read from a file descriptor
+.SH SYNOPSIS
+.B "ssize_t" timed_read
+.BI "(int " fd ","
+.BI "void *" buf ","
+.BI "size_t " size ","
+.BI "unsigned int " timeout ");"
+.SH ARGUMENTS
+.IP "fd" 12
+file descriptor to read from
+.IP "buf" 12
+buffer for the returned data
+.IP "size" 12
+size of the buffer pointed to by \fIbuf\fP
+.IP "timeout" 12
+time to wait for data
+.SH "DESCRIPTION"
+\fBtimed_read\fP attempts to read up to \fIsize\fP bytes from file descriptor \fIfd\fP
+into the buffer starting at \fIbuf\fP. If \fItimeout\fP was set to 0, this
+function behaves exactly like read(2). Otherwise, select(2) will be used
+to wait up to \fItimeout\fP seconds until returning an error.
+.TH "timed_write" 9 "timed_write" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+timed_write \- write to a file descriptor
+.SH SYNOPSIS
+.B "ssize_t" timed_write
+.BI "(int " fd ","
+.BI "const void *" buf ","
+.BI "size_t " size ","
+.BI "unsigned int " timeout ");"
+.SH ARGUMENTS
+.IP "fd" 12
+file descriptor to write to
+.IP "buf" 12
+buffer containing the data to be written
+.IP "size" 12
+size of the buffer pointed to by \fIbuf\fP
+.IP "timeout" 12
+time to wait for \fIfd\fP to become ready
+.SH "DESCRIPTION"
+\fBtimed_write\fP attempts to write up to \fIsize\fP bytes from the buffer starting
+at \fIbuf\fP to the file descriptor \fIfd\fP. If \fItimeout\fP was set to 0, this
+function behaves exactly like write(2). Otherwise, select(2) will be used
+to wait up to \fItimeout\fP seconds until returning an error.
+.TH "get_exit_details" 9 "get_exit_details" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+get_exit_details \- get information about a process exit value
+.SH SYNOPSIS
+.B "void" get_exit_details
+.BI "(int " status ","
+.BI "int *" ret ","
+.BI "bool *" core ","
+.BI "bool *" signaled ","
+.BI "bool *" parent ");"
+.SH ARGUMENTS
+.IP "status" 12
+exit status
+.IP "ret" 12
+the real return value
+.IP "core" 12
+indicator if core was dumped
+.IP "signaled" 12
+indicator if process was killed by a signal
+.IP "parent" 12
+indicator if error has occurred in the parent
+process (only valid if \fIstatus\fP < 0)
+.SH "DESCRIPTION"
+\fBget_exit_details\fP takes the process exit value \fIstatus\fP (typically
+obtained by \fBwaitpid\fP and co) and sets the parameters as follows:
+- if the process exited normally (exit, _exit, or return from main),
+\fIret\fP will be set to the exit value
+- if the process was killed by a signal, \fIsignaled\fP will be set to
+true and \fIret\fP will be set to the signal that caused the abortion
+- if the process was killed by a signal, \fIcore\fP will indicate if a
+core dump has been created when the process died (and as before,
+\fIret\fP will hold the signal number)
+.TH "copy_exit_detail_str" 9 "copy_exit_detail_str" "August 2014" "Kernel Hacker's Manual" LINUX
+.SH NAME
+copy_exit_detail_str \- obtain a printable description for an exit status
+.SH SYNOPSIS
+.B "int" copy_exit_detail_str
+.BI "(int " status ","
+.BI "char **" buffer ");"
+.SH ARGUMENTS
+.IP "status" 12
+exit status
+.IP "buffer" 12
+pointer to a to-be-allocated buffer
+.SH "DESCRIPTION"
+\fBcopy_exit_detail_str\fP takes the process exit value \fIstatus\fP (typically
+obtained by \fBwaitpid\fP and co) and fills the buffer \fIbuffer\fP with a
+printable description. Information includes:
+- the return code
+- if killed by a signal, the signal number
+- if killed by a signal, whether the core was dumped
