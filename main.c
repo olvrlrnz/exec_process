@@ -192,21 +192,30 @@ static int t14(void)
 		return ret;
 
 	ret = (int) timed_read(proc.pi_stdout, buffer, sizeof(buffer), 2);
-	if (ret == -1)
-		return ret;
-
-	if (ret > 0) {
-		fprintf(stderr, "STDOUT: %s\n", buffer);
+	if (ret == -1) {
+		if (errno != ETIMEDOUT)
+			return ret;
+		else
+			fprintf(stderr, "STDOUT: <timeout>\n");
+	} else if (ret == 0) {
+		fprintf(stderr, "STDOUT: EOF\n");
+	} else {
+		fprintf(stderr, "STDOUT: %s", buffer);
 		goto done;
 	}
 
 	memset(buffer, 0, sizeof(buffer));
-	ret = (int) timed_read(proc.pi_stderr, buffer, sizeof(buffer), 2);
-	if (ret == -1)
-		return ret;
 
-	if (ret > 0) {
-		fprintf(stderr, "STDERR: %s\n", buffer);
+	ret = (int) timed_read(proc.pi_stderr, buffer, sizeof(buffer), 2);
+	if (ret == -1) {
+		if (errno != ETIMEDOUT)
+			return ret;
+		else
+			fprintf(stderr, "STDERR: <timeout>\n");
+	} else if (ret == 0) {
+		fprintf(stderr, "STDERR: EOF\n");
+	} else {
+		fprintf(stderr, "STDERR: %s", buffer);
 		goto done;
 	}
 
@@ -349,19 +358,19 @@ static int run_test(const struct testcase *test)
 	ret = test->tc_testfunc();
 	if (ret != test->tc_expected) {
 		printf("Testcase returned %d - expected %d\n", ret, test->tc_expected);
-		ret = 1;
-	} else {
-		char *exitString = NULL;
-		(void) copy_exit_detail_str(ret, &exitString);
-		if (exitString) {
-			printf("%s", exitString);
-			free(exitString);
-		}
-		ret = 0;
+		return 1;
+	}
+
+	if (test->tc_prettyprint) {
+		char *exit_string = NULL;
+		(void) copy_exit_detail_str(ret, &exit_string);
+		if (exit_string)
+			printf("%s\n", exit_string);
+		free(exit_string);
 	}
 
 	printf("\n\n");
-	return ret;
+	return 0;
 }
 
 int main(void)
