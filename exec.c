@@ -391,9 +391,9 @@ fail:
 
 			do {
 				child = waitpid(pid, &ret, 0);
-			} while (child == (pid_t) - 1 && errno == EINTR);
+			} while (child == (pid_t) -1 && errno == EINTR);
 
-			res = (child == (pid_t) - 1 ? -errno : ret);
+			res = (child == (pid_t) -1 ? -errno : ret);
 		} else {
 			res = 0;
 		}

@@ -301,6 +301,8 @@ int main(void)
 				}
 			}
 		} else {
+			printf("Testcase returned %d - expected %d\n",
+			       ret, test->tc_expected);
 			++failed;
 		}
 		printf("\n\n");
