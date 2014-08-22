@@ -196,16 +196,17 @@ static int t14(void)
 		return ret;
 
 	if (ret > 0) {
-		/* Got some bytes - should not happen */
+		fprintf(stderr, "STDOUT: %s\n", buffer);
 		goto done;
 	}
 
+	memset(buffer, 0, sizeof(buffer));
 	ret = (int) timed_read(proc.pi_stderr, buffer, sizeof(buffer), 2);
 	if (ret == -1)
 		return ret;
 
 	if (ret > 0) {
-		/* Got some bytes - should hit because of ls failing */
+		fprintf(stderr, "STDERR: %s\n", buffer);
 		goto done;
 	}
 
@@ -226,25 +227,87 @@ static int t15(void)
 		return ret;
 
 	ret = snprintf(buffer, sizeof(buffer), "2 + 2\n");
+	fprintf(stderr, " STDIN: %s", buffer);
 	ret = (int) timed_write(proc.pi_stdin, buffer, (size_t) ret, 1);
 	if (ret == -1)
 		return ret;
 
 	ret = (int) timed_read(proc.pi_stderr, buffer, sizeof(buffer), 2);
-	if (ret == -1 && errno != ETIMEDOUT)
-		return ret;
-
-	if (ret > 0) {
-		/* Got some bytes - should not happen */
+	if (ret == -1) {
+		if (errno != ETIMEDOUT)
+			return ret;
+		else
+			fprintf(stderr, "STDERR: <timeout>\n");
+	} else if (ret == 0) {
+		fprintf(stderr, "STDERR: EOF\n");
+	} else {
+		fprintf(stderr, "STDERR: %s", buffer);
 		goto done;
 	}
 
+	memset(buffer, 0, sizeof(buffer));
+
 	ret = (int) timed_read(proc.pi_stdout, buffer, sizeof(buffer), 2);
-	if (ret == -1 && errno != ETIMEDOUT)
+	if (ret == -1) {
+		if (errno != ETIMEDOUT)
+			return ret;
+		else
+			fprintf(stderr, "STDOUT: <timeout>\n");
+	} else if (ret == 0) {
+		fprintf(stderr, "STDOUT: EOF\n");
+	} else {
+		fprintf(stderr, "STDOUT: %s", buffer);
+		goto done;
+	}
+
+done:
+	kill(proc.pi_pid, SIGTERM);
+	wait_for_child(&proc, true);
+	return proc.pi_retval;
+}
+
+static int t16(void)
+{
+	int ret;
+	char buffer[BUFFER_SIZE];
+	struct process_info proc;
+
+	ret = exec_process(&proc, false, NULL, USERINFO_TYPE_NONE,
+	                   "/usr/bin/bc", "-q", NULL);
+	if (ret)
 		return ret;
 
-	if (ret > 0) {
-		/* Got some bytes - should print '4' */
+	ret = snprintf(buffer, sizeof(buffer), "willfail(foo)\n");
+	fprintf(stderr, " STDIN: %s", buffer);
+	ret = (int) timed_write(proc.pi_stdin, buffer, (size_t) ret, 1);
+	if (ret == -1)
+		return ret;
+
+	ret = (int) timed_read(proc.pi_stdout, buffer, sizeof(buffer), 2);
+	if (ret == -1) {
+		if (errno != ETIMEDOUT)
+			return ret;
+		else
+			fprintf(stderr, "STDOUT: <timeout>\n");
+	} else if (ret == 0) {
+		fprintf(stderr, "STDOUT: EOF\n");
+	} else {
+		fprintf(stderr, "STDOUT: %s", buffer);
+		goto done;
+	}
+
+	memset(buffer, 0, sizeof(buffer));
+
+	ret = (int) timed_read(proc.pi_stderr, buffer, sizeof(buffer), 2);
+	if (ret == -1) {
+		if (errno != ETIMEDOUT)
+			return ret;
+		else
+			fprintf(stderr, "STDERR: <timeout>\n");
+	} else if (ret == 0) {
+		fprintf(stderr, "STDERR: EOF\n");
+	} else {
+		fprintf(stderr, "STDERR: %s", buffer);
 		goto done;
 	}
 
@@ -275,37 +338,42 @@ const struct testcase testcases[] = {
 
 	/* random tests */
 	{ t14,	  512,	true },
-	{ t15,	   15,	true }
+	{ t15,	   15,	true },
+	{ t16,	   15,	true }
 };
+
+static int run_test(const struct testcase *test)
+{
+	int ret;
+
+	ret = test->tc_testfunc();
+	if (ret != test->tc_expected) {
+		printf("Testcase returned %d - expected %d\n", ret, test->tc_expected);
+		ret = 1;
+	} else {
+		char *exitString = NULL;
+		(void) copy_exit_detail_str(ret, &exitString);
+		if (exitString) {
+			printf("%s", exitString);
+			free(exitString);
+		}
+		ret = 0;
+	}
+
+	printf("\n\n");
+	return ret;
+}
 
 int main(void)
 {
-	const struct testcase *test;
 	int i, failed, numTests;
 
 	failed = 0;
 	numTests = ARRAY_SIZE(testcases);
 	for (i = 0; i < numTests; ++i) {
-		int ret;
-
-		test = &testcases[i];
 		printf("Running test case %d ...\n", i + 1);
-		ret = test->tc_testfunc();
-		if (ret == test->tc_expected) {
-			if (test->tc_prettyprint) {
-				char *exitString = NULL;
-				(void)copy_exit_detail_str(ret, &exitString);
-				if (exitString) {
-					printf("%s", exitString);
-					free(exitString);
-				}
-			}
-		} else {
-			printf("Testcase returned %d - expected %d\n",
-			       ret, test->tc_expected);
+		if (run_test(testcases + i))
 			++failed;
-		}
-		printf("\n\n");
 	}
 
 	return failed;
