@@ -371,12 +371,11 @@ fail:
 
 		close(self_pipe[PIPE_WR_FD]);
 
-		while ((count = read(self_pipe[PIPE_RD_FD],
-				     &child_error, sizeof(child_error))) == -1)
-		{
-			if (errno != EAGAIN && errno != EINTR) {
+		while ((count =
+			read(self_pipe[PIPE_RD_FD], &child_error,
+			     sizeof(child_error))) == -1) {
+			if (errno != EAGAIN && errno != EINTR)
 				break;
-			}
 		}
 
 		close(self_pipe[PIPE_RD_FD]);
@@ -394,7 +393,7 @@ fail:
 				child = waitpid(pid, &ret, 0);
 			} while (child == (pid_t) - 1 && errno == EINTR);
 
-			res = (child == (pid_t) - 1 ? errno : ret);
+			res = (child == (pid_t) - 1 ? -errno : ret);
 		} else {
 			res = 0;
 		}
