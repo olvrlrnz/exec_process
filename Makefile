@@ -40,6 +40,7 @@ OBJ := $(SRC:.c=.o)
 $(APP): $(OBJ)
 	echo "[LD] $(APP)"
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	cp scripts/*.sh /tmp
 
 clean:
 	rm -f $(APP) *.o core
