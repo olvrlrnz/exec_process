@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include "exec.h"
 
+#define SCRIPT_DIR		PREFIX"/scripts"
 #define BUFFER_SIZE		4096U
 
 typedef int (*testfunc_t)(void);
@@ -37,13 +38,13 @@ struct testcase {
 static int t0(void)
 {
 	return exec_process(NULL, true, NULL, USERINFO_TYPE_NONE,
-	                    "/tmp/ret0.sh", NULL);
+	                    SCRIPT_DIR"/ret0.sh", NULL);
 }
 
 static int t1(void)
 {
 	return exec_process(NULL, true, NULL, USERINFO_TYPE_NONE,
-	                    "/tmp/ret14.sh", NULL);
+	                    SCRIPT_DIR"/ret14.sh", NULL);
 }
 
 static int t2(void)
@@ -55,13 +56,13 @@ static int t2(void)
 static int t3(void)
 {
 	return exec_process(NULL, true, NULL, USERINFO_TYPE_NONE,
-	                    "/tmp/sigPipe.sh", NULL);
+	                    SCRIPT_DIR"/sigPipe.sh", NULL);
 }
 
 static int t4(void)
 {
 	return exec_process(NULL, true, NULL, USERINFO_TYPE_NONE,
-	                    "/tmp/sigAbrt.sh", NULL);
+	                    SCRIPT_DIR"/sigAbrt.sh", NULL);
 }
 
 static int t5(void)
@@ -86,7 +87,7 @@ static int t7(void)
 	struct process_info proc;
 
 	ret = exec_process(&proc, false, NULL, USERINFO_TYPE_NONE,
-	                   "/tmp/ret0.sh", NULL);
+	                   SCRIPT_DIR"/ret0.sh", NULL);
 	if (ret)
 		return ret;
 
@@ -100,7 +101,7 @@ static int t8(void)
 	struct process_info proc;
 
 	ret = exec_process(&proc, false, NULL, USERINFO_TYPE_NONE,
-	                   "/tmp/ret14.sh", NULL);
+	                   SCRIPT_DIR"/ret14.sh", NULL);
 	if (ret)
 		return ret;
 
@@ -128,7 +129,7 @@ static int t10(void)
 	struct process_info proc;
 
 	ret = exec_process(&proc, false, NULL, USERINFO_TYPE_NONE,
-	                   "/tmp/sigPipe.sh", NULL);
+	                   SCRIPT_DIR"/sigPipe.sh", NULL);
 	if (ret)
 		return ret;
 
@@ -142,7 +143,7 @@ static int t11(void)
 	struct process_info proc;
 
 	ret = exec_process(&proc, false, NULL, USERINFO_TYPE_NONE,
-	                   "/tmp/sigAbrt.sh", NULL);
+	                   SCRIPT_DIR"/sigAbrt.sh", NULL);
 	if (ret)
 		return ret;
 
