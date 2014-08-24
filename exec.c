@@ -161,74 +161,145 @@ int copy_exit_detail_str(int status, char **buffer)
 	return (ret == -1);
 }
 
+static inline int fd_get_flags(int fd)
+{
+	return fcntl(fd, F_GETFD, NULL);
+}
+
+static inline int fd_set_flags(int fd, int flags)
+{
+	return fcntl(fd, F_SETFD, flags & ~O_NONBLOCK);
+}
+
+static inline int fd_set_nonblocking(int fd, int flags)
+{
+	return fcntl(fd, F_SETFD, flags | O_NONBLOCK);
+}
+
 ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
 {
 	int ret;
+	int flags;
 	fd_set set;
+	size_t have;
 	struct timeval wait_time;
 
-	if (!timeout)
+	if (unlikely(!timeout))
 		return read(fd, buf, size);
 
-	FD_ZERO(&set);
-	FD_SET(fd, &set);
-
-	wait_time.tv_sec  = timeout;
-	wait_time.tv_usec = 0;
-
-	ret = select(fd + 1, &set, NULL, NULL, &wait_time);
-	if (ret == 0) {
-		errno = ETIMEDOUT;
+	flags = fd_get_flags(fd);
+	if (flags == -1)
 		return -1;
-	} else if (ret == -1) {
+
+	if (fd_set_nonblocking(fd, flags))
 		return -1;
-	} else {
-		ssize_t count;
 
-		ret = fcntl(fd, F_GETFD, NULL);
-		if (ret == -1)
-			return -1;
-		fcntl(fd, F_SETFD, ret | O_NONBLOCK);
-		count = read(fd, buf, size);
-		(void) fcntl(fd, F_SETFD, ret);
+	have = 0;
+	for (;;) {
+		FD_ZERO(&set);
+		FD_SET(fd, &set);
 
-		return count;
+		wait_time.tv_sec = timeout;
+		wait_time.tv_usec = 0;
+
+		ret = select(fd + 1, &set, NULL, NULL, &wait_time);
+		if (ret == 0) {
+			if (!have) {
+				errno = ETIMEDOUT;
+				have = -1;
+			}
+			break;
+		} else if (ret == -1) {
+			if (errno == EINTR) {
+				continue;
+			} else {
+				have = -1;
+				break;
+			}
+		} else {
+			ssize_t count;
+
+			count = read(fd, buf + have, size - have);
+			if (count == -1) {
+				if (errno == EINTR || errno == EAGAIN) {
+					continue;
+				} else {
+					have = -1;
+					break;
+				}
+			} else if (count == 0) {
+				break;
+			} else {
+				have += (size_t) count;
+			}
+		}
 	}
+
+	(void) fd_set_flags(fd, flags);
+	return have;
 }
 
 ssize_t timed_write(int fd, const void *buf, size_t size, unsigned int timeout)
 {
 	int ret;
+	int flags;
 	fd_set set;
+	size_t have;
 	struct timeval wait_time;
 
-	if (!timeout)
+	if (unlikely(!timeout))
 		return write(fd, buf, size);
 
-	FD_ZERO(&set);
-	FD_SET(fd, &set);
-
-	wait_time.tv_sec  = timeout;
-	wait_time.tv_usec = 0;
-
-	ret = select(fd + 1, NULL, &set, NULL, &wait_time);
-	if (ret == 0) {
-		errno = ETIMEDOUT;
+	flags = fd_get_flags(fd);
+	if (flags == -1)
 		return -1;
-	} else if (ret == -1) {
+
+	if (fd_set_nonblocking(fd, flags))
 		return -1;
-	} else {
-		ssize_t count;
 
-		ret = fcntl(fd, F_GETFD, NULL);
-		if (ret == -1)
-			return -1;
-		fcntl(fd, F_SETFD, ret | O_NONBLOCK);
-		count = write(fd, buf, size);
-		(void) fcntl(fd, F_SETFD, ret);
+	have = 0;
+	for (;;) {
+		FD_ZERO(&set);
+		FD_SET(fd, &set);
 
-		return count;
+		wait_time.tv_sec = timeout;
+		wait_time.tv_usec = 0;
+
+		ret = select(fd + 1, NULL, &set, NULL, &wait_time);
+		if (ret == 0) {
+			if (!have) {
+				errno = ETIMEDOUT;
+				have = -1;
+			}
+			break;
+		} else if (ret == -1) {
+			if (errno == EINTR) {
+				continue;
+			} else {
+				have = -1;
+				break;
+			}
+		} else {
+			ssize_t count;
+
+			count = write(fd, buf + have, size - have);
+			if (count == -1) {
+				if (errno == EINTR || errno == EAGAIN) {
+					continue;
+				} else {
+					have = -1;
+					break;
+				}
+			} else if (count == 0) {
+				break;
+			} else {
+				have += (size_t) count;
+			}
+		}
 	}
+
+	(void) fd_set_flags(fd, flags);
+	return have;
 }
 
 _sentinel int exec_process(struct process_info *proc_info, bool wait,
