@@ -173,7 +173,12 @@ static inline int fd_set_flags(int fd, int flags)
 
 static inline int fd_set_nonblocking(int fd, int flags)
 {
-	return fcntl(fd, F_SETFD, flags | O_NONBLOCK);
+	return fd_set_flags(fd, flags | O_NONBLOCK);
+}
+
+static inline int fd_clear_nonblocking(int fd, int flags)
+{
+	return fd_set_flags(fd, flags & (~O_NONBLOCK));
 }
 
 ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
@@ -235,7 +240,7 @@ ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
 		}
 	}
 
-	(void) fd_set_flags(fd, flags & (~O_NONBLOCK));
+	(void) fd_clear_nonblocking(fd, flags);
 	return have;
 }
 
@@ -298,7 +303,7 @@ ssize_t timed_write(int fd, const void *buf, size_t size, unsigned int timeout)
 		}
 	}
 
-	(void) fd_set_flags(fd, flags & (~O_NONBLOCK));
+	(void) fd_clear_nonblocking(fd, flags);
 	return have;
 }
 
