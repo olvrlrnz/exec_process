@@ -173,6 +173,9 @@ extern int wait_for_child(struct process_info *proc, bool close_fds);
  * into the buffer starting at @buf. If @timeout was set to %0, this
  * function behaves exactly like read(2). Otherwise, select(2) will be used
  * to wait up to @timeout seconds until returning an error.
+ * NOTE: when using %0 timeout, this function may block forever due to
+ *       stream buffering in the child process. Therefore, only use %0
+ *       timeout if it is assured that the child process exits while waiting.
  *
  * @return: On success, the number of bytes read is
  *          returned (zero indicates end of file).
