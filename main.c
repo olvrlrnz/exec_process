@@ -357,11 +357,6 @@ static int run_test(const struct testcase *test)
 	int ret;
 
 	ret = test->tc_testfunc();
-	if (ret != test->tc_expected) {
-		printf("Testcase returned %d - expected %d\n", ret, test->tc_expected);
-		return 1;
-	}
-
 	if (test->tc_prettyprint) {
 		char *exit_string = NULL;
 		(void) copy_exit_detail_str(ret, &exit_string);
