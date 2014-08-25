@@ -187,10 +187,8 @@ ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
 	int flags;
 	fd_set set;
 	size_t have;
+	ssize_t count;
 	struct timeval wait_time;
-
-	if (unlikely(!timeout))
-		return read(fd, buf, size);
 
 	flags = fd_get_flags(fd);
 	if (flags == -1)
@@ -198,6 +196,9 @@ ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
 
 	if (fd_set_nonblocking(fd, flags))
 		return -1;
+
+	if (!timeout)
+		timeout = (unsigned int) -1;
 
 	have = 0;
 	for (;;) {
@@ -222,8 +223,6 @@ ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
 				break;
 			}
 		} else {
-			ssize_t count;
-
 			count = read(fd, buf + have, size - have);
 			if (count == -1) {
 				if (errno == EINTR || errno == EAGAIN) {
@@ -250,10 +249,8 @@ ssize_t timed_write(int fd, const void *buf, size_t size, unsigned int timeout)
 	int flags;
 	fd_set set;
 	size_t have;
+	ssize_t count;
 	struct timeval wait_time;
-
-	if (unlikely(!timeout))
-		return write(fd, buf, size);
 
 	flags = fd_get_flags(fd);
 	if (flags == -1)
@@ -261,6 +258,9 @@ ssize_t timed_write(int fd, const void *buf, size_t size, unsigned int timeout)
 
 	if (fd_set_nonblocking(fd, flags))
 		return -1;
+
+	if (!timeout)
+		timeout = (unsigned int) -1;
 
 	have = 0;
 	for (;;) {
@@ -285,8 +285,6 @@ ssize_t timed_write(int fd, const void *buf, size_t size, unsigned int timeout)
 				break;
 			}
 		} else {
-			ssize_t count;
-
 			count = write(fd, buf + have, size - have);
 			if (count == -1) {
 				if (errno == EINTR || errno == EAGAIN) {
