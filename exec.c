@@ -163,12 +163,12 @@ int copy_exit_detail_str(int status, char **buffer)
 
 static inline int fd_get_flags(int fd)
 {
-	return fcntl(fd, F_GETFD, NULL);
+	return fcntl(fd, F_GETFL, NULL);
 }
 
 static inline int fd_set_flags(int fd, int flags)
 {
-	return fcntl(fd, F_SETFD, flags);
+	return fcntl(fd, F_SETFL, flags);
 }
 
 static inline int fd_set_nonblocking(int fd, int flags)
@@ -179,6 +179,15 @@ static inline int fd_set_nonblocking(int fd, int flags)
 static inline int fd_clear_nonblocking(int fd, int flags)
 {
 	return fd_set_flags(fd, flags & (~O_NONBLOCK));
+}
+
+static inline int fd_make_nonblocking(int fd)
+{
+	int flags;
+	flags = fd_get_flags(fd);
+	if (flags == -1)
+		return -1;
+	return fd_set_nonblocking(fd, flags);
 }
 
 ssize_t timed_read(int fd, void *buf, size_t size, unsigned int timeout)
@@ -368,11 +377,29 @@ int exec_process_p(struct process_info *proc_info, bool wait,
 	}
 
 	if (proc_info) {
-		if (pipe(pipes[ PIPE_STDIN]) ||
-		    pipe(pipes[PIPE_STDOUT]) || pipe(pipes[PIPE_STDERR])) {
+#ifdef __linux__
+		if (pipe2(pipes[ PIPE_STDIN], 0) ||
+		    pipe2(pipes[PIPE_STDOUT], O_NONBLOCK) ||
+		    pipe2(pipes[PIPE_STDERR], O_NONBLOCK)) {
 			res = -errno;
 			goto exit;
 		}
+#else
+		if (pipe(pipes[ PIPE_STDIN]) ||
+		    pipe(pipes[PIPE_STDOUT]) ||
+		    pipe(pipes[PIPE_STDERR])) {
+			res = -errno;
+			goto exit;
+		}
+
+		if (fd_make_nonblocking(pipes[PIPE_STDOUT][PIPE_RD_FD]) ||
+		    fd_make_nonblocking(pipes[PIPE_STDOUT][PIPE_WR_FD]) ||
+		    fd_make_nonblocking(pipes[PIPE_STDERR][PIPE_RD_FD]) ||
+		    fd_make_nonblocking(pipes[PIPE_STDERR][PIPE_WR_FD])) {
+			res = -errno;
+			goto exit;
+		}
+#endif
 	}
 
 	if (pipe(self_pipe)) {
@@ -402,11 +429,11 @@ int exec_process_p(struct process_info *proc_info, bool wait,
 			dup2(pipes[PIPE_STDOUT][PIPE_WR_FD], STDOUT_FILENO);
 			dup2(pipes[PIPE_STDERR][PIPE_WR_FD], STDERR_FILENO);
 
-			close(pipes[PIPE_STDIN][PIPE_RD_FD]);
+			close(pipes[ PIPE_STDIN][PIPE_RD_FD]);
 			close(pipes[PIPE_STDOUT][PIPE_WR_FD]);
 			close(pipes[PIPE_STDERR][PIPE_WR_FD]);
 
-			close(pipes[PIPE_STDIN][PIPE_WR_FD]);
+			close(pipes[ PIPE_STDIN][PIPE_WR_FD]);
 			close(pipes[PIPE_STDOUT][PIPE_RD_FD]);
 			close(pipes[PIPE_STDERR][PIPE_RD_FD]);
 		}
@@ -438,7 +465,7 @@ fail:
 		ssize_t count;
 
 		if (proc_info) {
-			close(pipes[PIPE_STDIN][PIPE_RD_FD]);
+			close(pipes[ PIPE_STDIN][PIPE_RD_FD]);
 			close(pipes[PIPE_STDOUT][PIPE_WR_FD]);
 			close(pipes[PIPE_STDERR][PIPE_WR_FD]);
 		}
